@@ -16,6 +16,7 @@ class OEB_Shortcodes {
 		$atts = shortcode_atts( [
 			'position' => '',
 			'year'     => '',
+			'set'      => '',
 		], $atts, 'oeb_candidates' );
 
 		$position_slug = sanitize_key( $atts['position'] );
@@ -23,19 +24,27 @@ class OEB_Shortcodes {
 			return '';
 		}
 
-		$year = absint( $atts['year'] );
-		if ( ! $year ) {
+		$year   = absint( $atts['year'] );
+		$set_id = absint( $atts['set'] );
+
+		// Fall back to active election set if not specified.
+		if ( ! $year || ! $set_id ) {
 			$active = OEB_Election_Set::get_active();
 			if ( $active ) {
-				$year = intval( $active->year );
+				if ( ! $year ) {
+					$year = intval( $active->year );
+				}
+				if ( ! $set_id ) {
+					$set_id = intval( $active->id );
+				}
 			}
 		}
 
-		if ( ! $year ) {
+		if ( ! $year || ! $set_id ) {
 			return '';
 		}
 
-		$category_id = OEB_Category_Manager::get_position_category_id( $year, $position_slug );
+		$category_id = OEB_Category_Manager::get_position_category_id( $year, $set_id, $position_slug );
 		if ( ! $category_id ) {
 			return '<p>' . esc_html__( 'No candidates have been approved yet.', 'owbn-election-bridge' ) . '</p>';
 		}

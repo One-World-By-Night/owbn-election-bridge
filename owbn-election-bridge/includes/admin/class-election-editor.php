@@ -266,7 +266,6 @@ class OEB_Election_Editor {
 		$start = sanitize_text_field( $_POST['application_start'] ?? '' );
 		$end   = sanitize_text_field( $_POST['application_end'] ?? '' );
 
-		// Swap if end is before start.
 		if ( $end && $start && $end < $start ) {
 			list( $start, $end ) = [ $end, $start ];
 		}
@@ -274,15 +273,32 @@ class OEB_Election_Editor {
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$raw_positions = isset( $_POST['positions'] ) ? (array) wp_unslash( $_POST['positions'] ) : [];
 
-		$existing_set = $existing_id ? OEB_Election_Set::get( $existing_id ) : null;
+		$existing_set       = $existing_id ? OEB_Election_Set::get( $existing_id ) : null;
 		$existing_positions = $existing_set ? $existing_set->positions : [];
 
-		// Build lookup of existing positions by slug.
 		$existing_lookup = [];
 		foreach ( $existing_positions as $ep ) {
 			$existing_lookup[ $ep['coordinator_slug'] ?? '' ] = $ep;
 		}
 
+		// Save the set first so we have an ID for category slugs.
+		$set_data = [
+			'year'              => $year,
+			'application_start' => $start,
+			'application_end'   => $end,
+			'positions'         => [],
+			'status'            => $existing_set ? $existing_set->status : 'draft',
+		];
+		if ( $existing_id ) {
+			$set_data['id'] = $existing_id;
+		}
+		$set_id = OEB_Election_Set::save( $set_data );
+		if ( ! $set_id ) {
+			return $existing_id;
+		}
+		$set_id = absint( $set_id );
+
+		// Now create categories and votes using the set ID.
 		$positions = [];
 		foreach ( $raw_positions as $raw ) {
 			if ( ! is_array( $raw ) || empty( $raw['coordinator_slug'] ) ) {
@@ -294,21 +310,18 @@ class OEB_Election_Editor {
 			$type   = sanitize_key( $raw['voting_type'] ?? 'auto' );
 			$seats  = max( 1, intval( $raw['number_of_winners'] ?? 1 ) );
 
-			// Preserve existing vote_id/category_id if present.
 			$vote_id     = absint( $raw['vote_id'] ?? ( $existing_lookup[ $slug ]['vote_id'] ?? 0 ) );
 			$category_id = absint( $raw['category_id'] ?? ( $existing_lookup[ $slug ]['category_id'] ?? 0 ) );
 
-			// Create category if missing.
 			if ( ! $category_id ) {
-				$category_id = OEB_Category_Manager::ensure_position_category( $year, $slug, $title );
+				$category_id = OEB_Category_Manager::ensure_position_category( $year, $set_id, $slug, $title );
 			}
 
-			// Create vote if missing — seed with Abstain + Reject All Candidates.
 			if ( ! $vote_id && class_exists( 'WPVP_Database' ) ) {
 				$initial_type = 'auto' === $type ? 'singleton' : $type;
 				$vote_id = WPVP_Database::save_vote( [
 					'proposal_name'        => sprintf( '%s Election %d', $title, $year ),
-					'proposal_description' => sprintf( '[oeb_candidates position="%s" year="%d"]', $slug, $year ),
+					'proposal_description' => sprintf( '[oeb_candidates position="%s" year="%d" set="%d"]', $slug, $year, $set_id ),
 					'voting_type'          => $initial_type,
 					'number_of_winners'    => $seats,
 					'voting_options'       => [
@@ -329,20 +342,17 @@ class OEB_Election_Editor {
 			];
 		}
 
-		$data = [
+		// Update with populated positions.
+		OEB_Election_Set::save( [
+			'id'                => $set_id,
 			'year'              => $year,
 			'application_start' => $start,
 			'application_end'   => $end,
 			'positions'         => $positions,
 			'status'            => $existing_set ? $existing_set->status : 'draft',
-		];
+		] );
 
-		if ( $existing_id ) {
-			$data['id'] = $existing_id;
-		}
-
-		$result = OEB_Election_Set::save( $data );
-		return $result ? absint( $result ) : $existing_id;
+		return $set_id;
 	}
 
 	private static function render_sync_check( object $set ): void {

@@ -21,14 +21,14 @@ class OEB_Category_Manager {
 		return $result['term_id'];
 	}
 
-	public static function ensure_position_category( int $year, string $slug, string $title ): int {
+	// Set ID in slug guarantees uniqueness across special elections in the same year.
+	public static function ensure_position_category( int $year, int $set_id, string $slug, string $title ): int {
 		$parent_id = self::ensure_year_category( $year );
 		if ( ! $parent_id ) {
 			return 0;
 		}
 
-		// Year-prefix prevents slug collision across election years.
-		$cat_slug = sanitize_title( $year . '-' . $slug . '-coordinator' );
+		$cat_slug = sanitize_title( $year . '-s' . $set_id . '-' . $slug );
 		$term     = get_term_by( 'slug', $cat_slug, 'category' );
 
 		if ( $term && (int) $term->parent === $parent_id ) {
@@ -48,8 +48,8 @@ class OEB_Category_Manager {
 		return $result['term_id'];
 	}
 
-	public static function get_position_category_id( int $year, string $slug ): int {
-		$cat_slug = sanitize_title( $year . '-' . $slug . '-coordinator' );
+	public static function get_position_category_id( int $year, int $set_id, string $slug ): int {
+		$cat_slug = sanitize_title( $year . '-s' . $set_id . '-' . $slug );
 		$term     = get_term_by( 'slug', $cat_slug, 'category' );
 		return $term ? $term->term_id : 0;
 	}
