@@ -317,10 +317,10 @@ class OEB_Admin_Page {
 			return;
 		}
 
-		// Create the application page.
+		// Create the application page. Include set ID for uniqueness (special elections, etc.).
 		$page_id = wp_insert_post( [
 			'post_title'   => sprintf( '%d Coordinator Election Applications', $set->year ),
-			'post_name'    => sprintf( '%d-election-candidate-form', $set->year ),
+			'post_name'    => sprintf( '%d-election-candidate-form-%d', $set->year, $set->id ),
 			'post_content' => '[oeb_apply]',
 			'post_status'  => 'publish',
 			'post_type'    => 'page',
