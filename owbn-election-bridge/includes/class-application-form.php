@@ -8,6 +8,17 @@ class OEB_Application_Form {
 	public static function register(): void {
 		add_action( 'admin_post_' . self::ACTION, [ __CLASS__, 'handle_submit' ] );
 		add_action( 'admin_post_nopriv_' . self::ACTION, [ __CLASS__, 'handle_nopriv' ] );
+		add_action( 'wp_enqueue_scripts', [ __CLASS__, 'maybe_enqueue_assets' ] );
+	}
+
+	public static function maybe_enqueue_assets(): void {
+		global $post;
+		if ( ! $post || ! has_shortcode( $post->post_content, 'oeb_apply' ) ) {
+			return;
+		}
+		// Select2 for chronicle picker.
+		wp_enqueue_style( 'select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', [], '4.1.0' );
+		wp_enqueue_script( 'select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', [ 'jquery' ], '4.1.0', true );
 	}
 
 	public static function handle_nopriv(): void {
@@ -134,21 +145,21 @@ class OEB_Application_Form {
 		}
 
 		$content_parts = [];
-		$content_parts[] = '<h2>' . esc_html__( 'Introduction and Background', 'owbn-election-bridge' ) . '</h2>';
+		$content_parts[] = '<h3>' . esc_html__( 'Introduction and Background', 'owbn-election-bridge' ) . '</h3>';
 		$content_parts[] = $intro;
 
 		if ( ! empty( $experience ) ) {
-			$content_parts[] = '<h2>' . esc_html__( 'Administrative Experience', 'owbn-election-bridge' ) . '</h2>';
+			$content_parts[] = '<h3>' . esc_html__( 'Administrative Experience', 'owbn-election-bridge' ) . '</h3>';
 			$content_parts[] = $experience;
 		}
 
 		if ( ! empty( $statement ) ) {
-			$content_parts[] = '<h2>' . esc_html__( 'Personal Statement', 'owbn-election-bridge' ) . '</h2>';
+			$content_parts[] = '<h3>' . esc_html__( 'Personal Statement', 'owbn-election-bridge' ) . '</h3>';
 			$content_parts[] = $statement;
 		}
 
 		if ( ! empty( $goals ) ) {
-			$content_parts[] = '<h2>' . esc_html__( 'Goals', 'owbn-election-bridge' ) . '</h2>';
+			$content_parts[] = '<h3>' . esc_html__( 'Goals', 'owbn-election-bridge' ) . '</h3>';
 			$content_parts[] = $goals;
 		}
 
