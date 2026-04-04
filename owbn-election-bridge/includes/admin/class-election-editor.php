@@ -31,6 +31,23 @@ class OEB_Election_Editor {
 		<div class="wrap">
 			<h1><?php echo esc_html( $title ); ?></h1>
 
+			<?php if ( $set ) : ?>
+				<?php $page_id = absint( $set->page_id ?? 0 ); ?>
+				<?php if ( $page_id && 'publish' === get_post_status( $page_id ) ) : ?>
+					<div class="notice notice-info" style="padding: 12px;">
+						<strong><?php esc_html_e( 'Application Page:', 'owbn-election-bridge' ); ?></strong>
+						<a href="<?php echo esc_url( get_permalink( $page_id ) ); ?>" target="_blank">
+							<?php echo esc_html( get_permalink( $page_id ) ); ?>
+						</a>
+						— <?php esc_html_e( 'Share this link with candidates.', 'owbn-election-bridge' ); ?>
+					</div>
+				<?php elseif ( 'draft' === $set->status ) : ?>
+					<div class="notice notice-warning" style="padding: 12px;">
+						<?php esc_html_e( 'The application page will be created when you activate this election set.', 'owbn-election-bridge' ); ?>
+					</div>
+				<?php endif; ?>
+			<?php endif; ?>
+
 			<form method="post">
 				<?php wp_nonce_field( 'oeb_save_election' ); ?>
 				<input type="hidden" name="set_id" value="<?php echo esc_attr( $set_id ); ?>">

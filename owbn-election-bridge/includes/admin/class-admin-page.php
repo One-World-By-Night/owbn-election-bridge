@@ -118,9 +118,11 @@ class OEB_Admin_Page {
 
 			<h4><?php esc_html_e( 'Candidate Applications', 'owbn-election-bridge' ); ?></h4>
 			<ol>
-				<li><?php esc_html_e( 'Put the [oeb_apply] shortcode on any page. That\'s your application form.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'When you activate an election set, an application page is created automatically (e.g. "2026 Coordinator Election Applications").', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Share that page URL with candidates. You\'ll see the link on the election set list and on the edit page.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Candidates log in, pick a position, fill out their statement, and submit.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Each submission creates a pending post. You\'ll find them under Posts with "Pending" status.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'When the election is closed, the application page is automatically unpublished.', 'owbn-election-bridge' ); ?></li>
 			</ol>
 
 			<h4><?php esc_html_e( 'Approving Candidates', 'owbn-election-bridge' ); ?></h4>
@@ -174,6 +176,12 @@ class OEB_Admin_Page {
 			echo ' | <a href="' . esc_url( $close_url ) . '">' . esc_html__( 'Close All Votes', 'owbn-election-bridge' ) . '</a>';
 		}
 
+		// Application page link.
+		$page_id = absint( $set->page_id ?? 0 );
+		if ( $page_id && 'publish' === get_post_status( $page_id ) ) {
+			echo ' | <a href="' . esc_url( get_permalink( $page_id ) ) . '" target="_blank">' . esc_html__( 'Application Page', 'owbn-election-bridge' ) . '</a>';
+		}
+
 		// Pending candidates link.
 		if ( ! empty( $set->positions ) ) {
 			$pending_url = admin_url( 'edit.php?post_status=pending&post_type=post' );
@@ -223,6 +231,7 @@ class OEB_Admin_Page {
 		if ( 'active' === $status ) {
 			$current = OEB_Election_Set::get_active();
 			if ( $current && (int) $current->id !== $id ) {
+				self::close_election_page( $current );
 				OEB_Election_Set::save( [
 					'id'                => $current->id,
 					'year'              => $current->year,
@@ -242,6 +251,15 @@ class OEB_Admin_Page {
 			'positions'         => $set->positions,
 			'status'            => $status,
 		] );
+
+		// Reload to get saved state.
+		$set = OEB_Election_Set::get( $id );
+
+		if ( 'active' === $status ) {
+			self::ensure_election_page( $set );
+		} elseif ( in_array( $status, [ 'closed', 'archived' ], true ) ) {
+			self::close_election_page( $set );
+		}
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG ) );
 		exit;
@@ -285,5 +303,51 @@ class OEB_Admin_Page {
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG ) );
 		exit;
+	}
+
+	private static function ensure_election_page( object $set ): void {
+		$page_id = absint( $set->page_id ?? 0 );
+
+		// If page exists and is usable, just publish it.
+		if ( $page_id && get_post( $page_id ) ) {
+			wp_update_post( [
+				'ID'          => $page_id,
+				'post_status' => 'publish',
+			] );
+			return;
+		}
+
+		// Create the application page.
+		$page_id = wp_insert_post( [
+			'post_title'   => sprintf( '%d Coordinator Election Applications', $set->year ),
+			'post_name'    => sprintf( '%d-election-candidate-form', $set->year ),
+			'post_content' => '[oeb_apply]',
+			'post_status'  => 'publish',
+			'post_type'    => 'page',
+			'post_author'  => get_current_user_id(),
+		] );
+
+		if ( $page_id && ! is_wp_error( $page_id ) ) {
+			global $wpdb;
+			$wpdb->update(
+				OEB_Schema::table_name(),
+				[ 'page_id' => $page_id ],
+				[ 'id' => $set->id ],
+				[ '%d' ],
+				[ '%d' ]
+			);
+		}
+	}
+
+	private static function close_election_page( object $set ): void {
+		$page_id = absint( $set->page_id ?? 0 );
+		if ( ! $page_id ) {
+			return;
+		}
+
+		wp_update_post( [
+			'ID'          => $page_id,
+			'post_status' => 'draft',
+		] );
 	}
 }
