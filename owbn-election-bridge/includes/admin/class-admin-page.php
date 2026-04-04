@@ -14,7 +14,7 @@ class OEB_Admin_Page {
 
 	public static function register_menu(): void {
 		add_submenu_page(
-			'wp-voting-plugin',
+			'wpvp-votes',
 			__( 'Elections', 'owbn-election-bridge' ),
 			__( 'Elections', 'owbn-election-bridge' ),
 			'manage_options',
