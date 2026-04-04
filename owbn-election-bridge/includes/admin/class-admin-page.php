@@ -132,12 +132,15 @@ class OEB_Admin_Page {
 				<li><?php esc_html_e( 'Every vote starts as FPTP. If a position gets more than 2 candidates, it switches to Ranked Choice automatically.', 'owbn-election-bridge' ); ?></li>
 			</ol>
 
-			<h4><?php esc_html_e( 'Running the Vote', 'owbn-election-bridge' ); ?></h4>
+			<h4><?php esc_html_e( 'Timeline (Automatic)', 'owbn-election-bridge' ); ?></h4>
 			<ol>
-				<li><?php esc_html_e( 'When applications close and all candidates are approved, click Open All Votes on the election set.', 'owbn-election-bridge' ); ?></li>
-				<li><?php esc_html_e( 'Voters see the candidates on each vote page via the normal WP Voting interface.', 'owbn-election-bridge' ); ?></li>
-				<li><?php esc_html_e( 'When voting is done, click Close All Votes. Results are calculated by WP Voting.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Applications run from your start date to your end date. The form stops accepting submissions at midnight on the end date.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'A 7-day discussion period starts the day after applications close. Nothing automated happens — this is time for the org to review candidates.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Voting opens automatically 8 days after applications close (midnight cron). All votes open at once.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Voting closes automatically 14 days after applications close (midnight cron). Results are calculated by WP Voting.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'The exact dates are shown on the edit page under "Timeline" once you set an application end date.', 'owbn-election-bridge' ); ?></li>
 			</ol>
+			<p><?php esc_html_e( 'You can still use "Open All Votes" and "Close All Votes" to override the schedule manually if needed.', 'owbn-election-bridge' ); ?></p>
 
 			<h4><?php esc_html_e( 'Good to Know', 'owbn-election-bridge' ); ?></h4>
 			<ul style="list-style: disc; padding-left: 20px;">
@@ -146,6 +149,7 @@ class OEB_Admin_Page {
 				<li><?php esc_html_e( 'A candidate can apply for multiple positions — they just submit the form once per position.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Candidates mark which language their application is written in (English or Portuguese). This helps reviewers know what to expect.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Use the Sync Check on the edit page to make sure published candidates match what\'s in the vote.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Make sure all candidates are approved (published) before the voting period starts. Candidates published after votes open won\'t be added.', 'owbn-election-bridge' ); ?></li>
 			</ul>
 		</div>
 		<?php
