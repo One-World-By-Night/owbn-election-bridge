@@ -95,12 +95,12 @@ class OEB_Admin_Page {
 				</table>
 			<?php endif; ?>
 
-			<?php self::render_help(); ?>
+			<?php self::render_help_static(); ?>
 		</div>
 		<?php
 	}
 
-	private static function render_help(): void {
+	public static function render_help_static(): void {
 		?>
 		<div class="oeb-help" style="max-width: 720px; margin-top: 2em; padding: 16px 20px; background: #f0f0f1; border-left: 4px solid #2271b1;">
 			<h3 style="margin-top: 0;"><?php esc_html_e( 'How to Run an Election', 'owbn-election-bridge' ); ?></h3>

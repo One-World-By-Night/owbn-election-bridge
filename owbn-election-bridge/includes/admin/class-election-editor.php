@@ -66,10 +66,11 @@ class OEB_Election_Editor {
 				<table class="wp-list-table widefat" id="oeb-positions-table">
 					<thead>
 						<tr>
-							<th style="width: 40%"><?php esc_html_e( 'Coordinator', 'owbn-election-bridge' ); ?></th>
-							<th style="width: 30%"><?php esc_html_e( 'Voting Type', 'owbn-election-bridge' ); ?></th>
-							<th style="width: 20%"><?php esc_html_e( 'Status', 'owbn-election-bridge' ); ?></th>
-							<th style="width: 10%"></th>
+							<th style="width: 30%"><?php esc_html_e( 'Position', 'owbn-election-bridge' ); ?></th>
+							<th style="width: 25%"><?php esc_html_e( 'Voting Type', 'owbn-election-bridge' ); ?></th>
+							<th style="width: 10%"><?php esc_html_e( 'Seats', 'owbn-election-bridge' ); ?></th>
+							<th style="width: 15%"><?php esc_html_e( 'Status', 'owbn-election-bridge' ); ?></th>
+							<th style="width: 5%"></th>
 						</tr>
 					</thead>
 					<tbody id="oeb-positions-body">
@@ -82,9 +83,9 @@ class OEB_Election_Editor {
 					</tbody>
 				</table>
 
-				<p>
+				<p style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
 					<select id="oeb-add-coordinator">
-						<option value=""><?php esc_html_e( '— Add a coordinator —', 'owbn-election-bridge' ); ?></option>
+						<option value=""><?php esc_html_e( '— Pick from coordinators —', 'owbn-election-bridge' ); ?></option>
 						<?php foreach ( $coordinators as $coord ) : ?>
 							<option value="<?php echo esc_attr( $coord['slug'] ?? '' ); ?>"
 								data-title="<?php echo esc_attr( $coord['title'] ?? '' ); ?>">
@@ -93,7 +94,13 @@ class OEB_Election_Editor {
 						<?php endforeach; ?>
 					</select>
 					<button type="button" class="button" id="oeb-add-position-btn">
-						<?php esc_html_e( 'Add Position', 'owbn-election-bridge' ); ?>
+						<?php esc_html_e( 'Add', 'owbn-election-bridge' ); ?>
+					</button>
+					<span style="color: #888;"><?php esc_html_e( 'or', 'owbn-election-bridge' ); ?></span>
+					<input type="text" id="oeb-custom-slug" placeholder="<?php esc_attr_e( 'Custom slug', 'owbn-election-bridge' ); ?>" style="width: 140px;">
+					<input type="text" id="oeb-custom-title" placeholder="<?php esc_attr_e( 'Custom title', 'owbn-election-bridge' ); ?>" style="width: 200px;">
+					<button type="button" class="button" id="oeb-add-custom-btn">
+						<?php esc_html_e( 'Add Custom', 'owbn-election-bridge' ); ?>
 					</button>
 				</p>
 
@@ -104,6 +111,8 @@ class OEB_Election_Editor {
 
 				<?php submit_button( $is_edit ? __( 'Update Election Set', 'owbn-election-bridge' ) : __( 'Create Election Set', 'owbn-election-bridge' ), 'primary', 'oeb_save_election' ); ?>
 			</form>
+
+			<?php OEB_Admin_Page::render_help_static(); ?>
 		</div>
 
 		<script>
@@ -112,44 +121,68 @@ class OEB_Election_Editor {
 			var tbody = document.getElementById('oeb-positions-body');
 			var addBtn = document.getElementById('oeb-add-position-btn');
 			var addSelect = document.getElementById('oeb-add-coordinator');
+			var addCustomBtn = document.getElementById('oeb-add-custom-btn');
+			var customSlug = document.getElementById('oeb-custom-slug');
+			var customTitle = document.getElementById('oeb-custom-title');
 
-			function escHtml(str) {
+			function esc(str) {
 				var div = document.createElement('div');
 				div.appendChild(document.createTextNode(str));
 				return div.innerHTML;
 			}
 
-			addBtn.addEventListener('click', function() {
-				var opt = addSelect.options[addSelect.selectedIndex];
-				if (!opt.value) return;
+			function typeOptions() {
+				return '<option value="auto">Auto (FPTP/RCV)</option>' +
+					'<option value="singleton">FPTP</option>' +
+					'<option value="rcv">RCV</option>' +
+					'<option value="sequential_rcv">Sequential RCV (Multi-seat)</option>';
+			}
 
-				var slug = opt.value;
-				var title = opt.getAttribute('data-title') || slug;
-				var safeSlug = escHtml(slug);
-				var safeTitle = escHtml(title);
-
-				if (tbody.querySelector('[data-slug="' + safeSlug + '"]')) return;
+			function addRow(slug, title) {
+				var s = esc(slug), t = esc(title);
+				if (tbody.querySelector('[data-slug="' + s + '"]')) return;
 
 				var row = document.createElement('tr');
 				row.setAttribute('data-slug', slug);
 				row.innerHTML =
 					'<td>' +
-						'<input type="hidden" name="positions[' + idx + '][coordinator_slug]" value="' + safeSlug + '">' +
-						'<input type="hidden" name="positions[' + idx + '][coordinator_title]" value="' + safeTitle + '">' +
-						safeTitle +
+						'<input type="hidden" name="positions[' + idx + '][coordinator_slug]" value="' + s + '">' +
+						'<input type="hidden" name="positions[' + idx + '][coordinator_title]" value="' + t + '">' +
+						t +
 					'</td>' +
-					'<td>' +
-						'<select name="positions[' + idx + '][voting_type]">' +
-							'<option value="auto">Auto (FPTP/RCV)</option>' +
-							'<option value="singleton">FPTP</option>' +
-							'<option value="rcv">RCV</option>' +
-						'</select>' +
-					'</td>' +
+					'<td><select name="positions[' + idx + '][voting_type]" class="oeb-voting-type">' + typeOptions() + '</select></td>' +
+					'<td><input type="number" name="positions[' + idx + '][number_of_winners]" value="1" min="1" max="20" style="width:60px;" class="oeb-seats" disabled></td>' +
 					'<td>New</td>' +
 					'<td><button type="button" class="button oeb-remove-row">&times;</button></td>';
 				tbody.appendChild(row);
 				idx++;
+			}
+
+			addBtn.addEventListener('click', function() {
+				var opt = addSelect.options[addSelect.selectedIndex];
+				if (!opt.value) return;
+				addRow(opt.value, opt.getAttribute('data-title') || opt.value);
 				addSelect.selectedIndex = 0;
+			});
+
+			addCustomBtn.addEventListener('click', function() {
+				var slug = customSlug.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
+				var title = customTitle.value.trim();
+				if (!slug || !title) return;
+				addRow(slug, title);
+				customSlug.value = '';
+				customTitle.value = '';
+			});
+
+			// Enable/disable seats field based on voting type.
+			tbody.addEventListener('change', function(e) {
+				if (e.target.classList.contains('oeb-voting-type')) {
+					var seats = e.target.closest('tr').querySelector('.oeb-seats');
+					if (seats) {
+						seats.disabled = e.target.value !== 'sequential_rcv';
+						if (seats.disabled) seats.value = '1';
+					}
+				}
 			});
 
 			tbody.addEventListener('click', function(e) {
@@ -163,9 +196,10 @@ class OEB_Election_Editor {
 	}
 
 	private static function render_position_row( int $i, array $pos ): void {
-		$slug  = $pos['coordinator_slug'] ?? '';
-		$title = $pos['coordinator_title'] ?? $slug;
-		$type  = $pos['voting_type'] ?? 'auto';
+		$slug     = $pos['coordinator_slug'] ?? '';
+		$title    = $pos['coordinator_title'] ?? $slug;
+		$type     = $pos['voting_type'] ?? 'auto';
+		$seats    = intval( $pos['number_of_winners'] ?? 1 );
 		$has_vote = ! empty( $pos['vote_id'] );
 		$has_cat  = ! empty( $pos['category_id'] );
 
@@ -190,11 +224,17 @@ class OEB_Election_Editor {
 				<?php echo esc_html( $title ); ?>
 			</td>
 			<td>
-				<select name="positions[<?php echo esc_attr( $i ); ?>][voting_type]">
+				<select name="positions[<?php echo esc_attr( $i ); ?>][voting_type]" class="oeb-voting-type">
 					<option value="auto" <?php selected( $type, 'auto' ); ?>>Auto (FPTP/RCV)</option>
 					<option value="singleton" <?php selected( $type, 'singleton' ); ?>>FPTP</option>
 					<option value="rcv" <?php selected( $type, 'rcv' ); ?>>RCV</option>
+					<option value="sequential_rcv" <?php selected( $type, 'sequential_rcv' ); ?>>Sequential RCV (Multi-seat)</option>
 				</select>
+			</td>
+			<td>
+				<input type="number" name="positions[<?php echo esc_attr( $i ); ?>][number_of_winners]"
+					value="<?php echo esc_attr( $seats ); ?>" min="1" max="20" style="width: 60px;"
+					class="oeb-seats" <?php echo 'sequential_rcv' !== $type ? 'disabled' : ''; ?>>
 			</td>
 			<td><?php echo esc_html( $status ); ?></td>
 			<td>
@@ -232,9 +272,10 @@ class OEB_Election_Editor {
 				continue;
 			}
 
-			$slug  = sanitize_key( $raw['coordinator_slug'] );
-			$title = sanitize_text_field( $raw['coordinator_title'] ?? $slug );
-			$type  = sanitize_key( $raw['voting_type'] ?? 'auto' );
+			$slug   = sanitize_key( $raw['coordinator_slug'] );
+			$title  = sanitize_text_field( $raw['coordinator_title'] ?? $slug );
+			$type   = sanitize_key( $raw['voting_type'] ?? 'auto' );
+			$seats  = max( 1, intval( $raw['number_of_winners'] ?? 1 ) );
 
 			// Preserve existing vote_id/category_id if present.
 			$vote_id     = absint( $raw['vote_id'] ?? ( $existing_lookup[ $slug ]['vote_id'] ?? 0 ) );
@@ -252,6 +293,7 @@ class OEB_Election_Editor {
 					'proposal_name'        => sprintf( '%s Election %d', $title, $year ),
 					'proposal_description' => sprintf( '[oeb_candidates position="%s" year="%d"]', $slug, $year ),
 					'voting_type'          => $initial_type,
+					'number_of_winners'    => $seats,
 					'voting_options'       => [
 						[ 'text' => 'Abstain', 'description' => '' ],
 						[ 'text' => 'Reject All Candidates', 'description' => '' ],
@@ -266,6 +308,7 @@ class OEB_Election_Editor {
 				'category_id'       => $category_id,
 				'vote_id'           => $vote_id,
 				'voting_type'       => $type,
+				'number_of_winners' => $seats,
 			];
 		}
 
