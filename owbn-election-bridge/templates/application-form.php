@@ -49,7 +49,7 @@ defined( 'ABSPATH' ) || exit;
 	</fieldset>
 
 	<fieldset>
-		<legend><?php esc_html_e( 'This application is written in:', 'owbn-election-bridge' ); ?> *</legend>
+		<legend><?php esc_html_e( 'What language is this application written in?', 'owbn-election-bridge' ); ?> *</legend>
 		<label>
 			<input type="radio" name="source_language" value="en" checked>
 			English

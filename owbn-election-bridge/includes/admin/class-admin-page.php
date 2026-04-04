@@ -65,7 +65,7 @@ class OEB_Admin_Page {
 				<table class="wp-list-table widefat fixed striped">
 					<thead>
 						<tr>
-							<th><?php esc_html_e( 'Year', 'owbn-election-bridge' ); ?></th>
+							<th><?php esc_html_e( 'Election', 'owbn-election-bridge' ); ?></th>
 							<th><?php esc_html_e( 'Status', 'owbn-election-bridge' ); ?></th>
 							<th><?php esc_html_e( 'Positions', 'owbn-election-bridge' ); ?></th>
 							<th><?php esc_html_e( 'Applications', 'owbn-election-bridge' ); ?></th>
@@ -75,7 +75,7 @@ class OEB_Admin_Page {
 					<tbody>
 						<?php foreach ( $sets as $set ) : ?>
 							<tr>
-								<td><strong><?php echo esc_html( $set->year ); ?></strong></td>
+								<td><strong><?php echo esc_html( $set->name ); ?></strong></td>
 								<td><?php echo esc_html( $status_labels[ $set->status ] ?? $set->status ); ?></td>
 								<td><?php echo esc_html( count( $set->positions ) ); ?></td>
 								<td>
@@ -107,9 +107,9 @@ class OEB_Admin_Page {
 
 			<h4><?php esc_html_e( 'Setting Up', 'owbn-election-bridge' ); ?></h4>
 			<ol>
-				<li><?php esc_html_e( 'Click Add New to create an election set for the upcoming year.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Click Add New. Give it a name like "2027 Annual Elections" or "2027 Special Election — Brujah".', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Set your application start and end dates. Candidates can only apply during this window.', 'owbn-election-bridge' ); ?></li>
-				<li><?php esc_html_e( 'Pick coordinator positions from the dropdown, or type a custom slug and title for positions that aren\'t in the coordinator list (like "Mediation - North America").', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Pick coordinator positions from the dropdown, or type a custom slug and title for positions not in the list (like "Mediation - North America").', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'For each position, pick the voting type. Most positions use Auto (starts as FPTP, switches to Ranked Choice if 3+ candidates run).', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'For multi-seat positions (like Mediation), pick "Sequential RCV (Multi-seat)" and set the number of seats. Example: Mediation North America = 5 seats, South America = 2 seats.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Save. The plugin creates a draft vote and a post category for each position.', 'owbn-election-bridge' ); ?></li>
@@ -118,7 +118,7 @@ class OEB_Admin_Page {
 
 			<h4><?php esc_html_e( 'Candidate Applications', 'owbn-election-bridge' ); ?></h4>
 			<ol>
-				<li><?php esc_html_e( 'When you activate an election set, an application page is created automatically (e.g. "2026 Coordinator Election Applications").', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'When you activate an election set, an application page is created automatically using the election name.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Share that page URL with candidates. You\'ll see the link on the election set list and on the edit page.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Candidates log in, pick a position, fill out their statement, and submit.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Each submission creates a pending post. You\'ll find them under Posts with "Pending" status.', 'owbn-election-bridge' ); ?></li>
@@ -144,7 +144,7 @@ class OEB_Admin_Page {
 				<li><?php esc_html_e( 'Every vote always includes "Abstain" and "Reject All Candidates" as options.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Only one election set can be active at a time. Activating a new one closes the old one.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'A candidate can apply for multiple positions — they just submit the form once per position.', 'owbn-election-bridge' ); ?></li>
-				<li><?php esc_html_e( 'Candidates pick their language (English or Portuguese) when they apply. TranslatePress handles the rest.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Candidates mark which language their application is written in (English or Portuguese). This helps reviewers know what to expect.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Use the Sync Check on the edit page to make sure published candidates match what\'s in the vote.', 'owbn-election-bridge' ); ?></li>
 			</ul>
 		</div>
@@ -234,7 +234,7 @@ class OEB_Admin_Page {
 				self::close_election_page( $current );
 				OEB_Election_Set::save( [
 					'id'                => $current->id,
-					'year'              => $current->year,
+					'name'              => $current->name,
 					'application_start' => $current->application_start,
 					'application_end'   => $current->application_end,
 					'positions'         => $current->positions,
@@ -245,7 +245,7 @@ class OEB_Admin_Page {
 
 		OEB_Election_Set::save( [
 			'id'                => $id,
-			'year'              => $set->year,
+			'name'              => $set->name,
 			'application_start' => $set->application_start,
 			'application_end'   => $set->application_end,
 			'positions'         => $set->positions,
@@ -308,19 +308,24 @@ class OEB_Admin_Page {
 	private static function ensure_election_page( object $set ): void {
 		$page_id = absint( $set->page_id ?? 0 );
 
-		// If page exists and is usable, just publish it.
-		if ( $page_id && get_post( $page_id ) ) {
-			wp_update_post( [
-				'ID'          => $page_id,
-				'post_status' => 'publish',
-			] );
-			return;
+		// Re-publish if page exists and isn't permanently deleted.
+		if ( $page_id ) {
+			$page = get_post( $page_id );
+			if ( $page && 'trash' !== $page->post_status ) {
+				wp_update_post( [
+					'ID'          => $page_id,
+					'post_status' => 'publish',
+				] );
+				return;
+			}
+			// Trashed or deleted — create a new one.
 		}
 
-		// Create the application page. Include set ID for uniqueness (special elections, etc.).
+		$slug = sanitize_title( $set->name ) . '-' . $set->id;
+
 		$page_id = wp_insert_post( [
-			'post_title'   => sprintf( '%d Coordinator Election Applications', $set->year ),
-			'post_name'    => sprintf( '%d-election-candidate-form-%d', $set->year, $set->id ),
+			'post_title'   => sprintf( '%s — Applications', $set->name ),
+			'post_name'    => $slug,
 			'post_content' => '[oeb_apply]',
 			'post_status'  => 'publish',
 			'post_type'    => 'page',

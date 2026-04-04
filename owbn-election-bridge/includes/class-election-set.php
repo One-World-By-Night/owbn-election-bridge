@@ -24,10 +24,6 @@ class OEB_Election_Set {
 		$where = [ '1=1' ];
 		$args  = [];
 
-		if ( ! empty( $filters['year'] ) ) {
-			$where[] = 'year = %d';
-			$args[]  = intval( $filters['year'] );
-		}
 		if ( ! empty( $filters['status'] ) ) {
 			$where[] = 'status = %s';
 			$args[]  = sanitize_key( $filters['status'] );
@@ -50,14 +46,17 @@ class OEB_Election_Set {
 		return $rows;
 	}
 
-	public static function get_by_year( int $year ): array {
-		return self::get_all( [ 'year' => $year ] );
-	}
-
-	// Enforced: one active set at a time.
 	public static function get_active(): ?object {
 		$results = self::get_all( [ 'status' => 'active' ] );
 		return ! empty( $results ) ? $results[0] : null;
+	}
+
+	// Derive year from application_start date.
+	public static function derive_year( string $start_date ): int {
+		if ( empty( $start_date ) ) {
+			return intval( gmdate( 'Y' ) );
+		}
+		return intval( gmdate( 'Y', strtotime( $start_date ) ) );
 	}
 
 	/**
@@ -67,16 +66,18 @@ class OEB_Election_Set {
 		global $wpdb;
 
 		$table = OEB_Schema::table_name();
+		$start = sanitize_text_field( $data['application_start'] ?? '' );
 
 		$row = [
-			'year'              => intval( $data['year'] ?? gmdate( 'Y' ) ),
-			'application_start' => sanitize_text_field( $data['application_start'] ?? '' ),
+			'name'              => sanitize_text_field( $data['name'] ?? '' ),
+			'year'              => self::derive_year( $start ),
+			'application_start' => $start,
 			'application_end'   => ! empty( $data['application_end'] ) ? sanitize_text_field( $data['application_end'] ) : null,
 			'positions'         => wp_json_encode( $data['positions'] ?? [] ),
 			'status'            => sanitize_key( $data['status'] ?? 'draft' ),
 		];
 
-		$formats = [ '%d', '%s', '%s', '%s', '%s' ];
+		$formats = [ '%s', '%d', '%s', '%s', '%s', '%s' ];
 
 		$id = isset( $data['id'] ) ? absint( $data['id'] ) : 0;
 
@@ -136,7 +137,7 @@ class OEB_Election_Set {
 
 		return false !== self::save( [
 			'id'                => $set_id,
-			'year'              => $set->year,
+			'name'              => $set->name,
 			'application_start' => $set->application_start,
 			'application_end'   => $set->application_end,
 			'positions'         => $set->positions,

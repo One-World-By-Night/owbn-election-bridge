@@ -8,7 +8,6 @@ class OEB_Election_Editor {
 			wp_die( esc_html__( 'Unauthorized.', 'owbn-election-bridge' ) );
 		}
 
-		// Handle save — redirect to edit page to prevent duplicate POST on refresh.
 		if ( isset( $_POST['oeb_save_election'] ) ) {
 			check_admin_referer( 'oeb_save_election' );
 			$saved_id = self::process_save( $set_id );
@@ -24,7 +23,7 @@ class OEB_Election_Editor {
 
 		$is_edit = (bool) $set;
 		$title   = $is_edit
-			? sprintf( __( 'Edit Election Set: %s', 'owbn-election-bridge' ), esc_html( $set->year ) )
+			? sprintf( __( 'Edit: %s', 'owbn-election-bridge' ), esc_html( $set->name ) )
 			: __( 'New Election Set', 'owbn-election-bridge' );
 
 		?>
@@ -54,10 +53,11 @@ class OEB_Election_Editor {
 
 				<table class="form-table">
 					<tr>
-						<th><label for="oeb-year"><?php esc_html_e( 'Year', 'owbn-election-bridge' ); ?></label></th>
+						<th><label for="oeb-name"><?php esc_html_e( 'Election Name', 'owbn-election-bridge' ); ?></label></th>
 						<td>
-							<input type="number" id="oeb-year" name="year" min="2020" max="2099"
-								value="<?php echo esc_attr( $set ? $set->year : gmdate( 'Y' ) + 1 ); ?>" required>
+							<input type="text" id="oeb-name" name="name" class="regular-text"
+								value="<?php echo esc_attr( $set ? $set->name : '' ); ?>"
+								placeholder="<?php esc_attr_e( 'e.g. 2027 Annual Elections', 'owbn-election-bridge' ); ?>" required>
 						</td>
 					</tr>
 					<tr>
@@ -78,7 +78,7 @@ class OEB_Election_Editor {
 				</table>
 
 				<h2><?php esc_html_e( 'Positions', 'owbn-election-bridge' ); ?></h2>
-				<p class="description"><?php esc_html_e( 'Select coordinators whose positions are up for election.', 'owbn-election-bridge' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Pick from the coordinator list or add custom positions.', 'owbn-election-bridge' ); ?></p>
 
 				<table class="wp-list-table widefat" id="oeb-positions-table">
 					<thead>
@@ -191,7 +191,6 @@ class OEB_Election_Editor {
 				customTitle.value = '';
 			});
 
-			// Enable/disable seats field based on voting type.
 			tbody.addEventListener('change', function(e) {
 				if (e.target.classList.contains('oeb-voting-type')) {
 					var seats = e.target.closest('tr').querySelector('.oeb-seats');
@@ -262,9 +261,10 @@ class OEB_Election_Editor {
 	}
 
 	private static function process_save( int $existing_id ): int {
-		$year  = absint( $_POST['year'] ?? gmdate( 'Y' ) );
+		$name  = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
 		$start = sanitize_text_field( $_POST['application_start'] ?? '' );
 		$end   = sanitize_text_field( $_POST['application_end'] ?? '' );
+		$year  = OEB_Election_Set::derive_year( $start );
 
 		if ( $end && $start && $end < $start ) {
 			list( $start, $end ) = [ $end, $start ];
@@ -283,7 +283,7 @@ class OEB_Election_Editor {
 
 		// Save the set first so we have an ID for category slugs.
 		$set_data = [
-			'year'              => $year,
+			'name'              => $name,
 			'application_start' => $start,
 			'application_end'   => $end,
 			'positions'         => [],
@@ -298,7 +298,6 @@ class OEB_Election_Editor {
 		}
 		$set_id = absint( $set_id );
 
-		// Now create categories and votes using the set ID.
 		$positions = [];
 		foreach ( $raw_positions as $raw ) {
 			if ( ! is_array( $raw ) || empty( $raw['coordinator_slug'] ) ) {
@@ -306,7 +305,7 @@ class OEB_Election_Editor {
 			}
 
 			$slug   = sanitize_key( $raw['coordinator_slug'] );
-			$title  = sanitize_text_field( $raw['coordinator_title'] ?? $slug );
+			$ptitle = sanitize_text_field( $raw['coordinator_title'] ?? $slug );
 			$type   = sanitize_key( $raw['voting_type'] ?? 'auto' );
 			$seats  = max( 1, intval( $raw['number_of_winners'] ?? 1 ) );
 
@@ -314,13 +313,13 @@ class OEB_Election_Editor {
 			$category_id = absint( $raw['category_id'] ?? ( $existing_lookup[ $slug ]['category_id'] ?? 0 ) );
 
 			if ( ! $category_id ) {
-				$category_id = OEB_Category_Manager::ensure_position_category( $year, $set_id, $slug, $title );
+				$category_id = OEB_Category_Manager::ensure_position_category( $year, $set_id, $slug, $ptitle );
 			}
 
 			if ( ! $vote_id && class_exists( 'WPVP_Database' ) ) {
 				$initial_type = 'auto' === $type ? 'singleton' : $type;
 				$vote_id = WPVP_Database::save_vote( [
-					'proposal_name'        => sprintf( '%s Election %d', $title, $year ),
+					'proposal_name'        => sprintf( '%s — %s', $ptitle, $name ),
 					'proposal_description' => sprintf( '[oeb_candidates position="%s" year="%d" set="%d"]', $slug, $year, $set_id ),
 					'voting_type'          => $initial_type,
 					'number_of_winners'    => $seats,
@@ -334,7 +333,7 @@ class OEB_Election_Editor {
 
 			$positions[] = [
 				'coordinator_slug'  => $slug,
-				'coordinator_title' => $title,
+				'coordinator_title' => $ptitle,
 				'category_id'       => $category_id,
 				'vote_id'           => $vote_id,
 				'voting_type'       => $type,
@@ -342,10 +341,9 @@ class OEB_Election_Editor {
 			];
 		}
 
-		// Update with populated positions.
 		OEB_Election_Set::save( [
 			'id'                => $set_id,
-			'year'              => $year,
+			'name'              => $name,
 			'application_start' => $start,
 			'application_end'   => $end,
 			'positions'         => $positions,
@@ -370,11 +368,9 @@ class OEB_Election_Editor {
 		echo '</tr></thead><tbody>';
 
 		foreach ( $set->positions as $pos ) {
-			$slug    = $pos['coordinator_slug'] ?? '';
-			$title   = $pos['coordinator_title'] ?? $slug;
+			$ptitle  = $pos['coordinator_title'] ?? $pos['coordinator_slug'] ?? '';
 			$vote_id = absint( $pos['vote_id'] ?? 0 );
 
-			// Count published posts with this vote_id in meta.
 			$post_count = 0;
 			if ( $vote_id ) {
 				$posts = get_posts( [
@@ -388,7 +384,6 @@ class OEB_Election_Editor {
 				$post_count = count( $posts );
 			}
 
-			// Count voting options.
 			$option_count = 0;
 			if ( $vote_id ) {
 				$options = WPVP_Database::get_voting_options( $vote_id );
@@ -396,11 +391,11 @@ class OEB_Election_Editor {
 			}
 
 			$synced = $post_count === $option_count;
-			$status_text = $synced ? __( 'In Sync', 'owbn-election-bridge' ) : __( 'Mismatch', 'owbn-election-bridge' );
+			$status_text  = $synced ? __( 'In Sync', 'owbn-election-bridge' ) : __( 'Mismatch', 'owbn-election-bridge' );
 			$status_class = $synced ? 'color: green;' : 'color: red; font-weight: bold;';
 
 			echo '<tr>';
-			echo '<td>' . esc_html( $title ) . '</td>';
+			echo '<td>' . esc_html( $ptitle ) . '</td>';
 			echo '<td>' . esc_html( $post_count ) . '</td>';
 			echo '<td>' . esc_html( $option_count ) . '</td>';
 			echo '<td style="' . esc_attr( $status_class ) . '">' . esc_html( $status_text ) . '</td>';

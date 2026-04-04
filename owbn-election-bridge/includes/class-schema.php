@@ -16,6 +16,7 @@ class OEB_Schema {
 
 		$sql = "CREATE TABLE {$table} (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			name VARCHAR(255) NOT NULL,
 			year YEAR NOT NULL,
 			application_start DATE NOT NULL,
 			application_end DATE DEFAULT NULL,
