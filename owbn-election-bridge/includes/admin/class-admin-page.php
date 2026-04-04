@@ -109,7 +109,9 @@ class OEB_Admin_Page {
 			<ol>
 				<li><?php esc_html_e( 'Click Add New to create an election set for the upcoming year.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Set your application start and end dates. Candidates can only apply during this window.', 'owbn-election-bridge' ); ?></li>
-				<li><?php esc_html_e( 'Pick every coordinator position that\'s up for election. Each one gets its own vote automatically.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Pick coordinator positions from the dropdown, or type a custom slug and title for positions that aren\'t in the coordinator list (like "Mediation - North America").', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'For each position, pick the voting type. Most positions use Auto (starts as FPTP, switches to Ranked Choice if 3+ candidates run).', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'For multi-seat positions (like Mediation), pick "Sequential RCV (Multi-seat)" and set the number of seats. Example: Mediation North America = 5 seats, South America = 2 seats.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Save. The plugin creates a draft vote and a post category for each position.', 'owbn-election-bridge' ); ?></li>
 				<li><?php esc_html_e( 'Click Activate when you\'re ready to open the application window.', 'owbn-election-bridge' ); ?></li>
 			</ol>
