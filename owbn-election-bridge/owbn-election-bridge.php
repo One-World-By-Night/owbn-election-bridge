@@ -49,10 +49,12 @@ function oeb_init(): void {
 	require_once OEB_PATH . 'includes/class-candidate-sync.php';
 	require_once OEB_PATH . 'includes/class-application-form.php';
 	require_once OEB_PATH . 'includes/class-shortcodes.php';
+	require_once OEB_PATH . 'includes/class-cron.php';
 
 	OEB_Candidate_Sync::register();
 	OEB_Shortcodes::register();
 	OEB_Application_Form::register();
+	OEB_Cron::register();
 
 	if ( is_admin() ) {
 		require_once OEB_PATH . 'includes/admin/class-admin-page.php';

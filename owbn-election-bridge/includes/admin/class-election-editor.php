@@ -77,6 +77,42 @@ class OEB_Election_Editor {
 					</tr>
 				</table>
 
+				<?php if ( $set && $set->application_end ) : ?>
+					<h2><?php esc_html_e( 'Timeline', 'owbn-election-bridge' ); ?></h2>
+					<?php
+					$fmt = get_option( 'date_format' );
+					$app_end = $set->application_end;
+					?>
+					<table class="form-table" style="max-width: 500px;">
+						<tr>
+							<th><?php esc_html_e( 'Applications', 'owbn-election-bridge' ); ?></th>
+							<td>
+								<?php echo esc_html( date_i18n( $fmt, strtotime( $set->application_start ) ) ); ?>
+								&ndash;
+								<?php echo esc_html( date_i18n( $fmt, strtotime( $app_end ) ) ); ?>
+							</td>
+						</tr>
+						<tr>
+							<th><?php esc_html_e( 'Discussion', 'owbn-election-bridge' ); ?></th>
+							<td>
+								<?php echo esc_html( date_i18n( $fmt, strtotime( OEB_Cron::discussion_start( $app_end ) ) ) ); ?>
+								&ndash;
+								<?php echo esc_html( date_i18n( $fmt, strtotime( OEB_Cron::discussion_end( $app_end ) ) ) ); ?>
+								<span style="color: #888;">(<?php echo esc_html( OEB_Cron::DISCUSSION_DAYS ); ?> <?php esc_html_e( 'days', 'owbn-election-bridge' ); ?>)</span>
+							</td>
+						</tr>
+						<tr>
+							<th><?php esc_html_e( 'Voting', 'owbn-election-bridge' ); ?></th>
+							<td>
+								<?php echo esc_html( date_i18n( $fmt, strtotime( OEB_Cron::voting_start( $app_end ) ) ) ); ?>
+								&ndash;
+								<?php echo esc_html( date_i18n( $fmt, strtotime( OEB_Cron::voting_end( $app_end ) ) ) ); ?>
+								<span style="color: #888;">(<?php echo esc_html( OEB_Cron::VOTING_DAYS ); ?> <?php esc_html_e( 'days', 'owbn-election-bridge' ); ?>)</span>
+							</td>
+						</tr>
+					</table>
+				<?php endif; ?>
+
 				<h2><?php esc_html_e( 'Positions', 'owbn-election-bridge' ); ?></h2>
 				<p class="description"><?php esc_html_e( 'Pick from the coordinator list or add custom positions.', 'owbn-election-bridge' ); ?></p>
 
