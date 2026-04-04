@@ -94,6 +94,55 @@ class OEB_Admin_Page {
 					</tbody>
 				</table>
 			<?php endif; ?>
+
+			<?php self::render_help(); ?>
+		</div>
+		<?php
+	}
+
+	private static function render_help(): void {
+		?>
+		<div class="oeb-help" style="max-width: 720px; margin-top: 2em; padding: 16px 20px; background: #f0f0f1; border-left: 4px solid #2271b1;">
+			<h3 style="margin-top: 0;"><?php esc_html_e( 'How to Run an Election', 'owbn-election-bridge' ); ?></h3>
+
+			<h4><?php esc_html_e( 'Setting Up', 'owbn-election-bridge' ); ?></h4>
+			<ol>
+				<li><?php esc_html_e( 'Click Add New to create an election set for the upcoming year.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Set your application start and end dates. Candidates can only apply during this window.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Pick every coordinator position that\'s up for election. Each one gets its own vote automatically.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Save. The plugin creates a draft vote and a post category for each position.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Click Activate when you\'re ready to open the application window.', 'owbn-election-bridge' ); ?></li>
+			</ol>
+
+			<h4><?php esc_html_e( 'Candidate Applications', 'owbn-election-bridge' ); ?></h4>
+			<ol>
+				<li><?php esc_html_e( 'Put the [oeb_apply] shortcode on any page. That\'s your application form.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Candidates log in, pick a position, fill out their statement, and submit.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Each submission creates a pending post. You\'ll find them under Posts with "Pending" status.', 'owbn-election-bridge' ); ?></li>
+			</ol>
+
+			<h4><?php esc_html_e( 'Approving Candidates', 'owbn-election-bridge' ); ?></h4>
+			<ol>
+				<li><?php esc_html_e( 'Review each pending post. When you publish it, that candidate is automatically added to their position\'s vote.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'If you trash or unpublish a candidate post, they\'re removed from the vote.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Every vote starts as FPTP. If a position gets more than 2 candidates, it switches to Ranked Choice automatically.', 'owbn-election-bridge' ); ?></li>
+			</ol>
+
+			<h4><?php esc_html_e( 'Running the Vote', 'owbn-election-bridge' ); ?></h4>
+			<ol>
+				<li><?php esc_html_e( 'When applications close and all candidates are approved, click Open All Votes on the election set.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Voters see the candidates on each vote page via the normal WP Voting interface.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'When voting is done, click Close All Votes. Results are calculated by WP Voting.', 'owbn-election-bridge' ); ?></li>
+			</ol>
+
+			<h4><?php esc_html_e( 'Good to Know', 'owbn-election-bridge' ); ?></h4>
+			<ul style="list-style: disc; padding-left: 20px;">
+				<li><?php esc_html_e( 'Every vote always includes "Abstain" and "Reject All Candidates" as options.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Only one election set can be active at a time. Activating a new one closes the old one.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'A candidate can apply for multiple positions — they just submit the form once per position.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Candidates pick their language (English or Portuguese) when they apply. TranslatePress handles the rest.', 'owbn-election-bridge' ); ?></li>
+				<li><?php esc_html_e( 'Use the Sync Check on the edit page to make sure published candidates match what\'s in the vote.', 'owbn-election-bridge' ); ?></li>
+			</ul>
 		</div>
 		<?php
 	}
