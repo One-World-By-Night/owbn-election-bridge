@@ -53,7 +53,7 @@ class OEB_Cron {
 				continue;
 			}
 			$vote = WPVP_Database::get_vote( absint( $pos['vote_id'] ) );
-			if ( $vote && 'draft' === $vote->voting_stage ) {
+			if ( $vote && in_array( $vote->voting_stage, [ 'draft', 'scheduled' ], true ) ) {
 				return false;
 			}
 		}

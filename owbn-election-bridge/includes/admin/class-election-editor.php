@@ -354,6 +354,11 @@ class OEB_Election_Editor {
 
 			if ( ! $vote_id && class_exists( 'WPVP_Database' ) ) {
 				$initial_type = 'auto' === $type ? 'singleton' : $type;
+
+				// Pre-calculate voting window so vote is visible as "scheduled" immediately.
+				$opening = $end ? OEB_Cron::voting_start( $end ) . ' 00:00:00' : null;
+				$closing = $end ? OEB_Cron::voting_end( $end ) . ' 23:59:59' : null;
+
 				$vote_id = WPVP_Database::save_vote( [
 					'proposal_name'        => sprintf( '%s — %s', $ptitle, $name ),
 					'proposal_description' => sprintf( '[oeb_candidates position="%s" year="%d" set="%d"]', $slug, $year, $set_id ),
@@ -363,7 +368,9 @@ class OEB_Election_Editor {
 						[ 'text' => 'Abstain', 'description' => '' ],
 						[ 'text' => 'Reject All Candidates', 'description' => '' ],
 					],
-					'voting_stage'         => 'draft',
+					'voting_stage'         => 'scheduled',
+					'opening_date'         => $opening,
+					'closing_date'         => $closing,
 				] );
 			}
 
