@@ -61,6 +61,16 @@ class OEB_Election_Editor {
 						</td>
 					</tr>
 					<tr>
+						<th><label for="oeb-type"><?php esc_html_e( 'Election Type', 'owbn-election-bridge' ); ?></label></th>
+						<td>
+							<?php $el_type = $set ? ( $set->election_type ?? 'full_term' ) : 'full_term'; ?>
+							<select id="oeb-type" name="election_type">
+								<option value="full_term" <?php selected( $el_type, 'full_term' ); ?>><?php esc_html_e( 'Full Term', 'owbn-election-bridge' ); ?></option>
+								<option value="special" <?php selected( $el_type, 'special' ); ?>><?php esc_html_e( 'Special Election', 'owbn-election-bridge' ); ?></option>
+							</select>
+						</td>
+					</tr>
+					<tr>
 						<th><label for="oeb-start"><?php esc_html_e( 'Application Start', 'owbn-election-bridge' ); ?></label></th>
 						<td>
 							<input type="date" id="oeb-start" name="application_start"
@@ -297,10 +307,11 @@ class OEB_Election_Editor {
 	}
 
 	private static function process_save( int $existing_id ): int {
-		$name  = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
-		$start = sanitize_text_field( $_POST['application_start'] ?? '' );
-		$end   = sanitize_text_field( $_POST['application_end'] ?? '' );
-		$year  = OEB_Election_Set::derive_year( $start );
+		$name      = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
+		$el_type   = sanitize_key( $_POST['election_type'] ?? 'full_term' );
+		$start     = sanitize_text_field( $_POST['application_start'] ?? '' );
+		$end       = sanitize_text_field( $_POST['application_end'] ?? '' );
+		$year      = OEB_Election_Set::derive_year( $start );
 
 		if ( $end && $start && $end < $start ) {
 			list( $start, $end ) = [ $end, $start ];
@@ -320,6 +331,7 @@ class OEB_Election_Editor {
 		// Save the set first so we have an ID for category slugs.
 		$set_data = [
 			'name'              => $name,
+			'election_type'     => $el_type,
 			'application_start' => $start,
 			'application_end'   => $end,
 			'positions'         => [],
@@ -355,9 +367,12 @@ class OEB_Election_Editor {
 			if ( ! $vote_id && class_exists( 'WPVP_Database' ) ) {
 				$initial_type = 'auto' === $type ? 'singleton' : $type;
 
-				// Pre-calculate voting window so vote is visible as "scheduled" immediately.
 				$opening = $end ? OEB_Cron::voting_start( $end ) . ' 00:00:00' : null;
 				$closing = $end ? OEB_Cron::voting_end( $end ) . ' 23:59:59' : null;
+
+				$classification = 'special' === $el_type
+					? 'Coordinator Elections (Special)'
+					: 'Coordinator Elections (Full Term)';
 
 				$vote_id = WPVP_Database::save_vote( [
 					'proposal_name'        => sprintf( '%s — %s', $ptitle, $name ),
@@ -371,6 +386,8 @@ class OEB_Election_Editor {
 					'voting_stage'         => 'scheduled',
 					'opening_date'         => $opening,
 					'closing_date'         => $closing,
+					'proposed_by'          => 'Head Coordinator',
+					'classifications'      => [ $classification ],
 				] );
 			}
 
@@ -387,6 +404,7 @@ class OEB_Election_Editor {
 		OEB_Election_Set::save( [
 			'id'                => $set_id,
 			'name'              => $name,
+			'election_type'     => $el_type,
 			'application_start' => $start,
 			'application_end'   => $end,
 			'positions'         => $positions,

@@ -239,6 +239,7 @@ class OEB_Admin_Page {
 				OEB_Election_Set::save( [
 					'id'                => $current->id,
 					'name'              => $current->name,
+					'election_type'     => $current->election_type ?? 'full_term',
 					'application_start' => $current->application_start,
 					'application_end'   => $current->application_end,
 					'positions'         => $current->positions,
@@ -250,6 +251,7 @@ class OEB_Admin_Page {
 		OEB_Election_Set::save( [
 			'id'                => $id,
 			'name'              => $set->name,
+			'election_type'     => $set->election_type ?? 'full_term',
 			'application_start' => $set->application_start,
 			'application_end'   => $set->application_end,
 			'positions'         => $set->positions,

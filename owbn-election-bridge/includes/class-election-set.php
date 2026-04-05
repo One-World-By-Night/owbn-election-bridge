@@ -68,8 +68,14 @@ class OEB_Election_Set {
 		$table = OEB_Schema::table_name();
 		$start = sanitize_text_field( $data['application_start'] ?? '' );
 
+		$el_type = sanitize_key( $data['election_type'] ?? 'full_term' );
+		if ( ! in_array( $el_type, [ 'full_term', 'special' ], true ) ) {
+			$el_type = 'full_term';
+		}
+
 		$row = [
 			'name'              => sanitize_text_field( $data['name'] ?? '' ),
+			'election_type'     => $el_type,
 			'year'              => self::derive_year( $start ),
 			'application_start' => $start,
 			'application_end'   => ! empty( $data['application_end'] ) ? sanitize_text_field( $data['application_end'] ) : null,
@@ -77,7 +83,7 @@ class OEB_Election_Set {
 			'status'            => sanitize_key( $data['status'] ?? 'draft' ),
 		];
 
-		$formats = [ '%s', '%d', '%s', '%s', '%s', '%s' ];
+		$formats = [ '%s', '%s', '%d', '%s', '%s', '%s', '%s' ];
 
 		$id = isset( $data['id'] ) ? absint( $data['id'] ) : 0;
 
@@ -138,6 +144,7 @@ class OEB_Election_Set {
 		return false !== self::save( [
 			'id'                => $set_id,
 			'name'              => $set->name,
+			'election_type'     => $set->election_type ?? 'full_term',
 			'application_start' => $set->application_start,
 			'application_end'   => $set->application_end,
 			'positions'         => $set->positions,

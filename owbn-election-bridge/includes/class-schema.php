@@ -17,6 +17,7 @@ class OEB_Schema {
 		$sql = "CREATE TABLE {$table} (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			name VARCHAR(255) NOT NULL,
+			election_type VARCHAR(20) NOT NULL DEFAULT 'full_term',
 			year YEAR NOT NULL,
 			application_start DATE NOT NULL,
 			application_end DATE DEFAULT NULL,
