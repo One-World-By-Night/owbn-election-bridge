@@ -7,7 +7,7 @@ class OEB_Application_Form {
 
 	public static function register(): void {
 		add_action( 'admin_post_' . self::ACTION, [ __CLASS__, 'handle_submit' ] );
-		add_action( 'admin_post_nopriv_' . self::ACTION, [ __CLASS__, 'handle_nopriv' ] );
+		add_action( 'admin_post_nopriv_' . self::ACTION, [ __CLASS__, 'handle_submit' ] );
 		add_action( 'wp_enqueue_scripts', [ __CLASS__, 'maybe_enqueue_assets' ] );
 	}
 
@@ -16,14 +16,13 @@ class OEB_Application_Form {
 		if ( ! $post || ! has_shortcode( $post->post_content, 'oeb_apply' ) ) {
 			return;
 		}
-		// Select2 for chronicle picker.
 		wp_enqueue_style( 'select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', [], '4.1.0' );
 		wp_enqueue_script( 'select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', [ 'jquery' ], '4.1.0', true );
-	}
 
-	public static function handle_nopriv(): void {
-		wp_safe_redirect( wp_login_url( wp_get_referer() ?: home_url() ) );
-		exit;
+		$site_key = get_option( 'oeb_recaptcha_site_key', '' );
+		if ( $site_key ) {
+			wp_enqueue_script( 'google-recaptcha', 'https://www.google.com/recaptcha/api.js?render=' . urlencode( $site_key ), [], null, true );
+		}
 	}
 
 	public static function render(): string {
@@ -48,13 +47,6 @@ class OEB_Application_Form {
 			return '<div class="oeb-notice oeb-notice--info"><p>' . esc_html__( 'The application period has closed.', 'owbn-election-bridge' ) . '</p></div>';
 		}
 
-		if ( ! is_user_logged_in() ) {
-			return '<div class="oeb-notice oeb-notice--info"><p>' . sprintf(
-				esc_html__( 'You must %s to submit an application.', 'owbn-election-bridge' ),
-				'<a href="' . esc_url( wp_login_url( get_permalink() ) ) . '">' . esc_html__( 'log in', 'owbn-election-bridge' ) . '</a>'
-			) . '</p></div>';
-		}
-
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$status = sanitize_key( $_GET['oeb_status'] ?? '' );
 		$message = '';
@@ -64,9 +56,13 @@ class OEB_Application_Form {
 			$message = '<div class="oeb-notice oeb-notice--error"><p>' . esc_html__( 'There was an error submitting your application. Please try again.', 'owbn-election-bridge' ) . '</p></div>';
 		} elseif ( 'duplicate' === $status ) {
 			$message = '<div class="oeb-notice oeb-notice--error"><p>' . esc_html__( 'You have already submitted an application for this position.', 'owbn-election-bridge' ) . '</p></div>';
+		} elseif ( 'captcha' === $status ) {
+			$message = '<div class="oeb-notice oeb-notice--error"><p>' . esc_html__( 'Verification failed. Please try again.', 'owbn-election-bridge' ) . '</p></div>';
 		}
 
-		$current_user = wp_get_current_user();
+		$current_user = is_user_logged_in() ? wp_get_current_user() : null;
+		$is_guest     = ! is_user_logged_in();
+		$site_key     = get_option( 'oeb_recaptcha_site_key', '' );
 
 		ob_start();
 		echo $message; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -81,11 +77,17 @@ class OEB_Application_Form {
 	}
 
 	public static function handle_submit(): void {
-		if ( ! is_user_logged_in() ) {
-			wp_die( esc_html__( 'You must be logged in.', 'owbn-election-bridge' ), 403 );
-		}
-
 		check_admin_referer( self::ACTION );
+
+		// reCAPTCHA v3 verification.
+		$secret = get_option( 'oeb_recaptcha_secret_key', '' );
+		if ( $secret ) {
+			$token = sanitize_text_field( $_POST['g-recaptcha-response'] ?? '' );
+			if ( ! self::verify_recaptcha( $secret, $token ) ) {
+				self::redirect_back( 'captcha' );
+				return;
+			}
+		}
 
 		$election = OEB_Election_Set::get_active();
 		if ( ! $election ) {
@@ -97,15 +99,16 @@ class OEB_Application_Form {
 			wp_die( esc_html__( 'Applications are not open.', 'owbn-election-bridge' ), 400 );
 		}
 
-		$position_slug = sanitize_key( wp_unslash( $_POST['position'] ?? '' ) );
-		$name          = sanitize_text_field( wp_unslash( $_POST['applicant_name'] ?? '' ) );
-		$email         = sanitize_email( wp_unslash( $_POST['applicant_email'] ?? '' ) );
-		$chronicle     = sanitize_text_field( wp_unslash( $_POST['home_chronicle'] ?? '' ) );
-		$source_lang   = sanitize_key( wp_unslash( $_POST['source_language'] ?? 'en' ) );
-		$intro         = wp_kses_post( wp_unslash( $_POST['introduction'] ?? '' ) );
-		$experience    = wp_kses_post( wp_unslash( $_POST['experience'] ?? '' ) );
-		$statement     = wp_kses_post( wp_unslash( $_POST['personal_statement'] ?? '' ) );
-		$goals         = wp_kses_post( wp_unslash( $_POST['goals'] ?? '' ) );
+		$position_slug  = sanitize_key( wp_unslash( $_POST['position'] ?? '' ) );
+		$name           = sanitize_text_field( wp_unslash( $_POST['applicant_name'] ?? '' ) );
+		$email          = sanitize_email( wp_unslash( $_POST['applicant_email'] ?? '' ) );
+		$chronicle      = sanitize_text_field( wp_unslash( $_POST['home_chronicle'] ?? '' ) );
+		$approving_group = sanitize_text_field( wp_unslash( $_POST['approving_group'] ?? '' ) );
+		$source_lang    = sanitize_key( wp_unslash( $_POST['source_language'] ?? 'en' ) );
+		$intro          = wp_kses_post( wp_unslash( $_POST['introduction'] ?? '' ) );
+		$experience     = wp_kses_post( wp_unslash( $_POST['experience'] ?? '' ) );
+		$statement      = wp_kses_post( wp_unslash( $_POST['personal_statement'] ?? '' ) );
+		$goals          = wp_kses_post( wp_unslash( $_POST['goals'] ?? '' ) );
 
 		if ( empty( $position_slug ) || empty( $name ) || empty( $email ) || empty( $chronicle ) || empty( $intro ) ) {
 			self::redirect_back( 'error' );
@@ -125,16 +128,30 @@ class OEB_Application_Form {
 			return;
 		}
 
-		// One application per user per position.
-		$existing = get_posts( [
-			'post_type'      => 'post',
-			'post_status'    => [ 'pending', 'publish', 'draft' ],
-			'author'         => get_current_user_id(),
-			'meta_key'       => '_oeb_vote_id',
-			'meta_value'     => absint( $position['vote_id'] ),
-			'posts_per_page' => 1,
-			'fields'         => 'ids',
-		] );
+		// Duplicate check: by user ID if logged in, by email if guest.
+		if ( is_user_logged_in() ) {
+			$existing = get_posts( [
+				'post_type'      => 'post',
+				'post_status'    => [ 'pending', 'publish', 'draft' ],
+				'author'         => get_current_user_id(),
+				'meta_key'       => '_oeb_vote_id',
+				'meta_value'     => absint( $position['vote_id'] ),
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+			] );
+		} else {
+			$existing = get_posts( [
+				'post_type'      => 'post',
+				'post_status'    => [ 'pending', 'publish', 'draft' ],
+				'meta_query'     => [
+					'relation' => 'AND',
+					[ 'key' => '_oeb_vote_id', 'value' => absint( $position['vote_id'] ) ],
+					[ 'key' => '_oeb_applicant_email', 'value' => $email ],
+				],
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+			] );
+		}
 		if ( ! empty( $existing ) ) {
 			self::redirect_back( 'duplicate' );
 			return;
@@ -168,7 +185,7 @@ class OEB_Application_Form {
 			'post_content'  => implode( "\n\n", $content_parts ),
 			'post_status'   => 'pending',
 			'post_type'     => 'post',
-			'post_author'   => get_current_user_id(),
+			'post_author'   => is_user_logged_in() ? get_current_user_id() : 0,
 			'post_category' => [ absint( $position['category_id'] ) ],
 		], true );
 
@@ -183,8 +200,31 @@ class OEB_Application_Form {
 		update_post_meta( $post_id, '_oeb_applicant_email', $email );
 		update_post_meta( $post_id, '_oeb_home_chronicle', $chronicle );
 		update_post_meta( $post_id, '_oeb_source_language', $source_lang );
+		if ( ! empty( $approving_group ) ) {
+			update_post_meta( $post_id, '_oeb_approving_group', $approving_group );
+		}
 
 		self::redirect_back( 'success' );
+	}
+
+	private static function verify_recaptcha( string $secret, string $token ): bool {
+		if ( empty( $token ) ) {
+			return false;
+		}
+
+		$response = wp_remote_post( 'https://www.google.com/recaptcha/api/siteverify', [
+			'body' => [
+				'secret'   => $secret,
+				'response' => $token,
+			],
+		] );
+
+		if ( is_wp_error( $response ) ) {
+			return false;
+		}
+
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+		return ! empty( $body['success'] ) && ( $body['score'] ?? 0 ) >= 0.5;
 	}
 
 	private static function redirect_back( string $status ): void {

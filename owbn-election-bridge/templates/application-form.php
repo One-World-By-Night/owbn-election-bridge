@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-// Available in scope: $election, $current_user
+// Available in scope: $election, $current_user (null if guest), $is_guest, $site_key
 ?>
 <style>
 .oeb-application-form {
@@ -58,11 +58,17 @@ defined( 'ABSPATH' ) || exit;
 	border: 1px solid #8c8f94;
 	border-radius: 4px;
 }
+.oeb-application-form .oeb-field-hint {
+	color: #646970;
+	font-size: 0.9em;
+	margin-top: 4px;
+}
 </style>
 
-<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="oeb-application-form">
+<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="oeb-application-form" id="oeb-application-form">
 	<?php wp_nonce_field( OEB_Application_Form::ACTION ); ?>
 	<input type="hidden" name="action" value="<?php echo esc_attr( OEB_Application_Form::ACTION ); ?>">
+	<input type="hidden" name="g-recaptcha-response" id="oeb-recaptcha-token" value="">
 
 	<div class="oeb-field">
 		<label for="oeb-position"><?php esc_html_e( 'Position Applied For', 'owbn-election-bridge' ); ?> *</label>
@@ -77,15 +83,15 @@ defined( 'ABSPATH' ) || exit;
 	</div>
 
 	<div class="oeb-field">
-		<label for="oeb-name"><?php esc_html_e( 'Applicant Name', 'owbn-election-bridge' ); ?> *</label>
+		<label for="oeb-name"><?php esc_html_e( 'Full Name', 'owbn-election-bridge' ); ?> *</label>
 		<input type="text" id="oeb-name" name="applicant_name"
-			value="<?php echo esc_attr( $current_user->display_name ); ?>" required>
+			value="<?php echo esc_attr( $current_user ? $current_user->display_name : '' ); ?>" required>
 	</div>
 
 	<div class="oeb-field">
-		<label for="oeb-email"><?php esc_html_e( 'Applicant Email', 'owbn-election-bridge' ); ?> *</label>
+		<label for="oeb-email"><?php esc_html_e( 'Personal Email', 'owbn-election-bridge' ); ?> *</label>
 		<input type="email" id="oeb-email" name="applicant_email"
-			value="<?php echo esc_attr( $current_user->user_email ); ?>" required>
+			value="<?php echo esc_attr( $current_user ? $current_user->user_email : '' ); ?>" required>
 	</div>
 
 	<div class="oeb-field">
@@ -110,6 +116,13 @@ defined( 'ABSPATH' ) || exit;
 		<?php else : ?>
 			<input type="text" id="oeb-chronicle" name="home_chronicle" required>
 		<?php endif; ?>
+	</div>
+
+	<div class="oeb-field">
+		<label for="oeb-approving-group"><?php esc_html_e( 'Approving Group', 'owbn-election-bridge' ); ?></label>
+		<input type="text" id="oeb-approving-group" name="approving_group"
+			placeholder="<?php esc_attr_e( 'Chronicle or coordinator that can vouch for you', 'owbn-election-bridge' ); ?>">
+		<p class="oeb-field-hint"><?php esc_html_e( 'A chronicle name or coordinator office that can verify your membership.', 'owbn-election-bridge' ); ?></p>
 	</div>
 
 	<div class="oeb-field">
@@ -179,5 +192,21 @@ defined( 'ABSPATH' ) || exit;
 jQuery(document).ready(function($) {
 	$('#oeb-chronicle').select2({ placeholder: '<?php echo esc_js( __( '— Select chronicle —', 'owbn-election-bridge' ) ); ?>', allowClear: true, width: '100%' });
 	$('#oeb-position').select2({ placeholder: '<?php echo esc_js( __( '— Select a position —', 'owbn-election-bridge' ) ); ?>', allowClear: true, width: '100%' });
+
+	<?php if ( $site_key ) : ?>
+	$('#oeb-application-form').on('submit', function(e) {
+		var $form = $(this);
+		var $token = $('#oeb-recaptcha-token');
+		if ($token.val()) return true;
+
+		e.preventDefault();
+		grecaptcha.ready(function() {
+			grecaptcha.execute('<?php echo esc_js( $site_key ); ?>', { action: 'oeb_apply' }).then(function(token) {
+				$token.val(token);
+				$form[0].submit();
+			});
+		});
+	});
+	<?php endif; ?>
 });
 </script>
