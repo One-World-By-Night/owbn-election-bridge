@@ -388,6 +388,14 @@ class OEB_Election_Editor {
 					'closing_date'         => $closing,
 					'proposed_by'          => 'Head Coordinator',
 					'classifications'      => [ $classification ],
+					'visibility'           => 'public',
+					'voting_eligibility'   => 'restricted',
+					'voting_roles'         => [
+						'chronicle/*/cm',
+						'exec/head-coordinator/coordinator',
+						'exec/ahc1/coordinator',
+						'exec/ahc2/coordinator',
+					],
 				] );
 			}
 
