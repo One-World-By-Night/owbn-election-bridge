@@ -2,7 +2,7 @@
 /**
  * Plugin Name: OWBN Election Bridge
  * Description: Coordinator election management bridging candidate applications with wp-voting-plugin.
- * Version:     1.0.0
+ * Version:     1.1.0
  * Author:      OWBN Dev Team
  * License:     GPL-2.0-or-later
  * Text Domain: owbn-election-bridge
@@ -10,7 +10,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'OEB_VERSION', '1.0.0' );
+define( 'OEB_VERSION', '1.1.0' );
 define( 'OEB_FILE', __FILE__ );
 define( 'OEB_PATH', plugin_dir_path( __FILE__ ) );
 define( 'OEB_URL', plugin_dir_url( __FILE__ ) );

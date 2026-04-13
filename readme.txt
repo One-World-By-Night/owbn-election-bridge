@@ -2,7 +2,7 @@
 
 Manages coordinator elections for One World by Night. Bridges candidate applications with the voting system.
 
-Version: 1.0.0
+Version: 1.1.0
 Deployed to: council.owbn.net
 
 ## What It Does

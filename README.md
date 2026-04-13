@@ -2,7 +2,7 @@
 
 Manages coordinator elections for One World by Night. Bridges candidate applications with the voting system.
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Deployed to:** council.owbn.net
 
 ## What It Does
@@ -27,6 +27,14 @@ Key features:
 ## Requirements
 
 - WordPress 5.0+, PHP 7.4+
+
+## Changelog
+
+### 1.1.0
+- Application form opts out of owbn-core's Anonymize Post Author setting via the owc_anonymize_author_skip filter, preserving candidate attribution even when the site-wide setting is on.
+
+### 1.0.0
+- Initial release.
 
 ## License
 

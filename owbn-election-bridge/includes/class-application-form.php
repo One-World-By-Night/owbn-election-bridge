@@ -180,14 +180,33 @@ class OEB_Application_Form {
 			$content_parts[] = $goals;
 		}
 
-		$post_id = wp_insert_post( [
+		$oeb_insert = [
 			'post_title'    => $name,
 			'post_content'  => implode( "\n\n", $content_parts ),
 			'post_status'   => 'pending',
 			'post_type'     => 'post',
 			'post_author'   => is_user_logged_in() ? get_current_user_id() : 0,
 			'post_category' => [ absint( $position['category_id'] ) ],
-		], true );
+		];
+		$oeb_fired = false;
+		$oeb_skip_anon = function ( $skip, $data, $postarr ) use ( $oeb_insert, &$oeb_fired ) {
+			if ( $oeb_fired ) {
+				return $skip;
+			}
+			if (
+				( $postarr['post_title'] ?? null )  === $oeb_insert['post_title']
+				&& ( $postarr['post_type'] ?? null ) === 'post'
+				&& ( $postarr['post_status'] ?? null ) === 'pending'
+				&& ( $postarr['post_author'] ?? null ) === $oeb_insert['post_author']
+			) {
+				$oeb_fired = true;
+				return true;
+			}
+			return $skip;
+		};
+		add_filter( 'owc_anonymize_author_skip', $oeb_skip_anon, 10, 3 );
+		$post_id = wp_insert_post( $oeb_insert, true );
+		remove_filter( 'owc_anonymize_author_skip', $oeb_skip_anon, 10 );
 
 		if ( is_wp_error( $post_id ) ) {
 			self::redirect_back( 'error' );
