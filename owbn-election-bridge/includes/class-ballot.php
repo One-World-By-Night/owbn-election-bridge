@@ -31,25 +31,14 @@ class OEB_Ballot {
 			$set_summaries[] = self::summarize_set( $set );
 			foreach ( $set->positions as $position ) {
 				$card = self::build_card( $position, $set, $user_id );
-				if ( $card ) {
+				if ( $card && 'open' === $card['state'] ) {
 					$cards[] = $card;
 				}
 			}
 		}
 
-		// Sort cards: open first, then apps_open, then apps_closed_voting_pending,
-		// then closed. Within a state, sort by position title.
-		$state_rank = array(
-			'open'                       => 0,
-			'apps_open'                  => 1,
-			'apps_closed_voting_pending' => 2,
-			'closed'                     => 3,
-			'no_vote'                    => 9,
-		);
-		usort( $cards, function ( $a, $b ) use ( $state_rank ) {
-			$ra = $state_rank[ $a['state'] ] ?? 9;
-			$rb = $state_rank[ $b['state'] ] ?? 9;
-			if ( $ra !== $rb ) return $ra - $rb;
+		// Sort by position title (alphabetical) since all cards are 'open'.
+		usort( $cards, function ( $a, $b ) {
 			return strcmp( strtolower( $a['position_title'] ), strtolower( $b['position_title'] ) );
 		} );
 
